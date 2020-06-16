@@ -50,3 +50,22 @@ func (p pgRepository) UpdateUser(ctx context.Context, account *model.Account) (*
 	//account o day da la con tro san roi
 	return account, err
 }
+
+func (p pgRepository) GetUserList(ctx context.Context) (*[]model.Account, error) {
+	db := p.getDB(ctx)
+	accounts := []model.Account{}
+
+	// vi vo tinh truoc do dc khoi tao la con tro roi
+	err := db.Find(&accounts).Error
+	//account o day da la con tro san roi
+	return &accounts, err
+}
+
+func (p pgRepository) DeleteUser(ctx context.Context, account *model.Account) (*model.Account, error) {
+	db := p.getDB(ctx)
+
+	// vi vo tinh truoc do dc khoi tao la con tro roi
+	err := db.Delete(account).Error
+	//account o day da la con tro san roi
+	return account, err
+}

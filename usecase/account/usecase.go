@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 
 	"go-template/config"
@@ -51,7 +52,8 @@ func (e *usecase) CreateAccount(ctx context.Context, account *model.Account) (*m
 
 			account.Password = string(hashPass)
 
-			//dua account vao de tao vao db
+			log.Println(account.Birthday)
+			//dua account vua tao vao db
 			account, err := e.accountRepo.CreateUser(ctx, account)
 			if err != nil {
 				return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed create user to db")
@@ -116,6 +118,13 @@ func (e *usecase) EditAccount(ctx context.Context, account *model.Account) (*mod
 
 	//th 1 khong tim duoc ket qua mong muon
 
+	hashPass, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed hash password")
+	}
+
+	account.Password = string(hashPass)
+
 	accountUpdated, err := e.accountRepo.UpdateUser(ctx, account)
 
 	if err != nil {
@@ -124,5 +133,43 @@ func (e *usecase) EditAccount(ctx context.Context, account *model.Account) (*mod
 	}
 
 	return accountUpdated, nil
+
+}
+
+func (e *usecase) UserDetail(ctx context.Context, account *model.Account) (*model.Account, error) {
+
+	accountdetail, err := e.accountRepo.GetByUserId(ctx, account.ID)
+	accountdetail.Password = ""
+	//err la khong tra ve ket qua mong muon
+	if err != nil {
+		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed get user by id")
+	}
+
+	//account da tao trong db
+	return accountdetail, nil
+}
+
+func (e *usecase) ShowUserList(ctx context.Context) (*[]model.Account, error) {
+
+	accountlist, err := e.accountRepo.GetUserList(ctx)
+	//err la khong tra ve ket qua mong muon
+	if err != nil {
+		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed get user list")
+	}
+
+	//account da tao trong db
+	return accountlist, nil
+}
+
+func (e *usecase) DeleteAccount(ctx context.Context, account *model.Account) (*model.Account, error) {
+
+	accountDeleted, err := e.accountRepo.DeleteUser(ctx, account)
+
+	if err != nil {
+
+		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "Delete failed")
+	}
+
+	return accountDeleted, nil
 
 }

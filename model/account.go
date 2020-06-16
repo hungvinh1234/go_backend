@@ -18,3 +18,7 @@ type Account struct {
 	IsAdmin    bool      `json:"is_admin,omitempty"`
 	Avatar     string    `json:"avatar,omitempty"`
 }
+
+// type Accounts struct {
+// 	Accounts []Account `json:"employees"`
+// }
