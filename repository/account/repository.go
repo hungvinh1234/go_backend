@@ -15,4 +15,5 @@ type Repository interface {
 
 	GetUserList(ctx context.Context) (*[]model.Account, error)
 	DeleteUser(ctx context.Context, account *model.Account) (*model.Account, error)
+	GetByUserEmail(ctx context.Context, email string) (*model.Account, error)
 }

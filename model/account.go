@@ -15,7 +15,7 @@ type Account struct {
 	University string    `json:"university,omitempty"`
 	StartDate  time.Time `json:"start_date,omitempty"`
 	RefUser    string    `json:"ref_user,omitempty"`
-	IsAdmin    bool      `json:"is_admin,omitempty"`
+	IsAdmin    string    `json:"is_admin,omitempty"`
 	Avatar     string    `json:"avatar,omitempty"`
 }
 

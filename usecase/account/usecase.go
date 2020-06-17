@@ -40,34 +40,62 @@ func (e *usecase) CreateAccount(ctx context.Context, account *model.Account) (*m
 
 	//err la khong tra ve ket qua mong muon
 	if err != nil {
-		//th 1 khong tim duoc ket qua mong muon
+		//th 1 khong tim duoc user
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 
-			//ham lay cua nguoi ta nen ko func
-
-			hashPass, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+			_, err := e.accountRepo.GetByUserEmail(ctx, account.Email)
 			if err != nil {
-				return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed hash password")
+				//th 1 khong tim duoc ket qua mong muon
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+
+					//Neu RefUser ma khac null thi moi kiem tra
+					if account.RefUser != "" {
+
+						_, err := e.accountRepo.GetByUserName(ctx, account.RefUser)
+						if err != nil {
+							//th 1 khong tim duoc ket qua mong muon
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								return nil, util.NewError(nil, http.StatusInternalServerError, 1011, "Reference User not exist !")
+							}
+						}
+
+					}
+
+					//ham lay cua nguoi ta nen ko func
+
+					hashPass, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+					if err != nil {
+						return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed hash password")
+					}
+
+					account.Password = string(hashPass)
+
+					log.Println(account.Birthday)
+					//dua account vua tao vao db
+					account, err := e.accountRepo.CreateUser(ctx, account)
+					if err != nil {
+						return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed create user to db")
+					}
+
+					//account da tao trong db
+					return account, nil
+
+				}
+
+				return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed get user by email")
+
 			}
 
-			account.Password = string(hashPass)
+			//email da ton tai
+			return nil, util.NewError(nil, http.StatusInternalServerError, 1011, "Email already taken !")
 
-			log.Println(account.Birthday)
-			//dua account vua tao vao db
-			account, err := e.accountRepo.CreateUser(ctx, account)
-			if err != nil {
-				return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed create user to db")
-			}
-
-			//account da tao trong db
-			return account, nil
 		}
 		//th 2 la viet ham sai
-		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed get user to db")
+		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed get user by username")
 	}
 
 	//user da ton tai
-	return nil, util.NewError(nil, http.StatusInternalServerError, 1010, "user existed in db")
+	return nil, util.NewError(nil, http.StatusInternalServerError, 1011, "Username already taken !")
 
 }
 
@@ -81,7 +109,7 @@ func (e *usecase) SignIn(ctx context.Context, account *model.Account) (*SignInRe
 		//th 1 khong tim duoc ket qua mong muon
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			//account da tao trong db
-			return nil, util.NewError(err, http.StatusInternalServerError, 1010, "user not existed in db")
+			return nil, util.NewError(err, http.StatusInternalServerError, 1010, "User not existed !")
 		}
 		//th 2 la viet ham sai
 		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "cannot get user")
@@ -90,7 +118,7 @@ func (e *usecase) SignIn(ctx context.Context, account *model.Account) (*SignInRe
 	err = bcrypt.CompareHashAndPassword([]byte(accountinDB.Password), []byte(account.Password))
 	if err != nil {
 		//password khong trung
-		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "password not match")
+		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "Password not match !")
 	}
 
 	claims := model.MyCustomClaims{

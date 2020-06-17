@@ -15,6 +15,7 @@ func NewHTTPHandler(ucase *usecase.Usecase) *echo.Echo {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
 
 	account.Init(e.Group("/account"), ucase.Account)
 

@@ -69,3 +69,12 @@ func (p pgRepository) DeleteUser(ctx context.Context, account *model.Account) (*
 	//account o day da la con tro san roi
 	return account, err
 }
+
+func (p pgRepository) GetByUserEmail(ctx context.Context, email string) (*model.Account, error) {
+	db := p.getDB(ctx)
+	account := model.Account{}
+
+	err := db.Where("email = ?", email).First(&account).Error
+
+	return &account, err
+}
