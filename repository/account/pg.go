@@ -47,6 +47,8 @@ func (p pgRepository) UpdateUser(ctx context.Context, account *model.Account) (*
 
 	// vi vo tinh truoc do dc khoi tao la con tro roi
 	err := db.Model(account).Updates(account).Error
+
+	db.Model(account).Updates(map[string]interface{}{"is_admin": account.IsAdmin})
 	//account o day da la con tro san roi
 	return account, err
 }

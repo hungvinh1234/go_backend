@@ -13,6 +13,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
+	"github.com/yudai/pp"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,7 +26,7 @@ type usecase struct {
 
 type SignInResponse struct {
 	model.Account
-	Token string
+	Token string `json:"token,omitempty"`
 }
 
 func New(accountRepo account.Repository) IUsecase {
@@ -121,6 +122,8 @@ func (e *usecase) SignIn(ctx context.Context, account *model.Account) (*SignInRe
 		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "Password not match !")
 	}
 
+	accountinDB.Password = ""
+
 	claims := model.MyCustomClaims{
 		Account: *accountinDB,
 	}
@@ -130,8 +133,6 @@ func (e *usecase) SignIn(ctx context.Context, account *model.Account) (*SignInRe
 	if err != nil {
 		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "can not create token")
 	}
-
-	accountinDB.Password = ""
 
 	response := SignInResponse{
 		Account: *accountinDB,
@@ -143,15 +144,24 @@ func (e *usecase) SignIn(ctx context.Context, account *model.Account) (*SignInRe
 }
 
 func (e *usecase) EditAccount(ctx context.Context, account *model.Account) (*model.Account, error) {
-
+	currentUser := ctx.Value("user").(*jwt.Token).Claims.(*model.MyCustomClaims).Account
+	pp.Println(currentUser)
 	//th 1 khong tim duoc ket qua mong muon
 
-	hashPass, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed hash password")
+	if currentUser.ID != account.ID {
+
+		return nil, util.NewError(nil, http.StatusInternalServerError, 1010, "You don't have permission")
+
 	}
 
-	account.Password = string(hashPass)
+	if account.Password != "" {
+		hashPass, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, util.NewError(err, http.StatusInternalServerError, 1010, "failed hash password")
+		}
+
+		account.Password = string(hashPass)
+	}
 
 	accountUpdated, err := e.accountRepo.UpdateUser(ctx, account)
 
@@ -166,6 +176,16 @@ func (e *usecase) EditAccount(ctx context.Context, account *model.Account) (*mod
 
 func (e *usecase) UserDetail(ctx context.Context, account *model.Account) (*model.Account, error) {
 
+	currentUser := ctx.Value("user").(*jwt.Token).Claims.(*model.MyCustomClaims).Account
+	pp.Println(currentUser)
+	//th 1 khong tim duoc ket qua mong muon
+
+	if currentUser.ID != account.ID {
+
+		return nil, util.NewError(nil, http.StatusInternalServerError, 1010, "You don't have permission")
+
+	}
+
 	accountdetail, err := e.accountRepo.GetByUserId(ctx, account.ID)
 	accountdetail.Password = ""
 	//err la khong tra ve ket qua mong muon
@@ -179,6 +199,16 @@ func (e *usecase) UserDetail(ctx context.Context, account *model.Account) (*mode
 
 func (e *usecase) ShowUserList(ctx context.Context) (*[]model.Account, error) {
 
+	currentUser := ctx.Value("user").(*jwt.Token).Claims.(*model.MyCustomClaims).Account
+	pp.Println(currentUser)
+	//th 1 khong tim duoc ket qua mong muon
+
+	if !currentUser.IsAdmin {
+
+		return nil, util.NewError(nil, http.StatusInternalServerError, 1010, "Only Admin can access this page !")
+
+	}
+
 	accountlist, err := e.accountRepo.GetUserList(ctx)
 	//err la khong tra ve ket qua mong muon
 	if err != nil {
@@ -190,6 +220,16 @@ func (e *usecase) ShowUserList(ctx context.Context) (*[]model.Account, error) {
 }
 
 func (e *usecase) DeleteAccount(ctx context.Context, account *model.Account) (*model.Account, error) {
+
+	currentUser := ctx.Value("user").(*jwt.Token).Claims.(*model.MyCustomClaims).Account
+	pp.Println(currentUser)
+	//th 1 khong tim duoc ket qua mong muon
+
+	if !currentUser.IsAdmin {
+
+		return nil, util.NewError(nil, http.StatusInternalServerError, 1010, "Only Admin can access this page !")
+
+	}
 
 	accountDeleted, err := e.accountRepo.DeleteUser(ctx, account)
 
